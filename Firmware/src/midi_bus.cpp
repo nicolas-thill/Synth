@@ -28,3 +28,13 @@ void MIDI_NODES_SETUP(void) {
     llist_raz(&midiOut);
     llist_raz(&midiChord);
 };
+
+void midi_enqueue_out(u_int8_t status, u_int8_t data1, u_int8_t data2)
+{
+  midiNode_t *node = (midiNode_t*)llist_pop_front(&midi_node_stack);
+  node->midiMsg.status = status;
+  node->midiMsg.data1 = data1;
+  node->midiMsg.data2 = data2;
+  node->midiMsg.channel = MIDI_OUTPUT_CHANNEL;
+  llist_push_front(&midiOut, node);
+}

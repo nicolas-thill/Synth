@@ -5,73 +5,68 @@
 */
 
 #include "json_config.h"
-#include "mapping_lib.h"
 
 #include <ArduinoJson.h>
 #include <SerialFlash.h>
 
+#include "mapping_circle.h"
+#include "mapping_toggle.h"
+#include "mapping_trigger.h"
+
 #define FLASH_CHIP_SELECT  6
 
-inline bool config_load_mapping_triggers(const JsonArray& config) {
-  if (config.isNull()) {
+inline bool config_load_mapping_circle(const JsonObject& mapping_data) {
+  mapping_circle_conf_s mapping_conf;
+  mapping_conf.center.X = mapping_data["x"];
+  mapping_conf.center.Y = mapping_data["y"];
+  mapping_conf.radius = mapping_data["radius"];
+  mapping_conf.offset = mapping_data["offset"];
+  mapping_circle_create(&mapping_conf);
+}
+
+inline bool config_load_mapping_toggle(const JsonObject& mapping_data) {
+  mapping_toggle_conf_s mapping_conf;
+  mapping_conf.center.X = mapping_data["x"];
+  mapping_conf.center.Y = mapping_data["y"];
+  mapping_conf.size = mapping_data["size"];
+  mapping_conf.note = mapping_data["note"];
+  mapping_toggle_create(&mapping_conf);
+}
+
+inline bool config_load_mapping_trigger(const JsonObject& mapping_data) {
+  mapping_trigger_conf_s mapping_conf;
+  mapping_conf.center.X = mapping_data["x"];
+  mapping_conf.center.Y = mapping_data["y"];
+  mapping_conf.size = mapping_data["size"];
+  mapping_conf.note = mapping_data["note"];
+  mapping_trigger_create(&mapping_conf);
+}
+
+inline bool config_load_mapping(const JsonObject& mapping) {
+  const char *mapping_type = mapping["type"];
+  const JsonObject& mapping_data = mapping["data"];
+  if (strcmp(mapping_type, "circle") == 0) {
+    config_load_mapping_circle(mapping_data);
+  } else if (strcmp(mapping_type, "toggle") == 0) {
+    config_load_mapping_toggle(mapping_data);
+  } else if (strcmp(mapping_type, "trigger") == 0) {
+    config_load_mapping_trigger(mapping_data);
+  } else {
+    // Unknown mapping: ignore? panic?
     return false;
-  }
-  mapping_triggers_alloc(config.size());
-  for (uint8_t i = 0; i < map_trigs; i++) {
-    map_trigsParams[i].posX = config[i]["posX"];
-    map_trigsParams[i].posY = config[i]["posY"];
-    map_trigsParams[i].size = config[i]["size"];
-    map_trigsParams[i].note = config[i]["note"];
   }
   return true;
 }
 
-inline bool config_load_mapping_toggles(const JsonArray& config) {
-  if (config.isNull()) {
+inline bool config_load_mappings(const JsonArray& mappings) {
+  if (mappings.isNull()) {
     return false;
+  };
+  for (int i = 0; i < mappings.size(); i++) {
+    if (!config_load_mapping(mappings[i])) {
+      return false;
+    }
   }
-  mapping_toggles_alloc(config.size());
-  for (uint8_t i = 0; i < map_togs; i++) {
-    map_togsParams[i].posX = config[i]["posX"];
-    map_togsParams[i].posY = config[i]["posY"];
-    map_togsParams[i].size = config[i]["size"];
-    map_togsParams[i].note = config[i]["note"];
-  }
-  return true;
-}
-
-inline bool config_load_mapping_circles(const JsonArray& config) {
-  if (config.isNull()) {
-    return false;
-  }
-  
-  mapping_circles_alloc(config.size());
-  for (uint8_t i = 0; i < map_circles; i++) {
-    map_circlesParams[i].center.x = config[i]["centerX"];
-    map_circlesParams[i].center.y = config[i]["centerY"];
-    map_circlesParams[i].radius = config[i]["radius"];
-    map_circlesParams[i].offset = config[i]["offset"];
-  };
-  return true;
-}
-
-inline bool config_load_mapping(const JsonObject& config) {
-  if (config.isNull()) {
-    return false;
-  };
-
-  if (!config_load_mapping_triggers(config["triggers"])) {
-    return false;
-  };
-
-  if (!config_load_mapping_toggles(config["toggles"])) {
-    return false;
-  };
-
-  if (!config_load_mapping_triggers(config["circles"])) {
-    return false;
-  };
-
   return true;
 }
 
@@ -100,7 +95,7 @@ void LOAD_SPI_FLASH_CONFIG() {
     config_error();
   }
 
-  if (!config_load_mapping(config["mapping"])) {
+  if (!config_load_mappings(config["mapping"])) {
     // FIXME: loading JSON config failed! abort? alert? panic?
   }
 

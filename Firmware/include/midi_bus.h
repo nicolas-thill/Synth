@@ -36,4 +36,6 @@ void llist_midi_init(llist_t* llist_ptr, midiNode_t* nodeArray_ptr, const int no
 
 void MIDI_NODES_SETUP(void);
 
+void midi_enqueue_out(u_int8_t status, u_int8_t data1, u_int8_t data2);
+
 #endif /*__MIDI_NODES_H__*/
